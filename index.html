@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Flappy Canarinho</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+    <!-- Main stylesheet -->
+    <link rel="stylesheet" href="style.css?v=9">
+    <!-- PWA / Mobile web app capability -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1c23">
+</head>
+<body>
+    <!-- MOBILE GAME CONTAINER FRAME -->
+    <div id="game-container">
+        <!-- Canvas for rendering the game -->
+        <canvas id="game-canvas" width="540" height="720"></canvas>
+
+        <!-- Dynamic Score Display during Gameplay -->
+        <div id="game-score" class="hud-element hidden">R$ 0,00</div>
+
+        <!-- LOGIN SCREEN -->
+        <div id="login-screen" class="overlay">
+            <div class="glass-card">
+                <div class="logo-container">
+                    <img class="logo-bird-small" src="./godot-flappy-canarinho-master/assets/Bird/bird-1.png" alt="Canarinho Bird">
+                    <h2 class="game-title">Flappy <span class="accent-text">Canarinho</span></h2>
+                </div>
+                <p class="game-subtitle">Acesse sua conta para começar</p>
+                
+                <form id="login-form" class="auth-form" onsubmit="return false;">
+                    <div class="input-group">
+                        <input type="tel" id="login-phone" placeholder="Telefone (Ex: 11999999999)" required autocomplete="tel">
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="login-password" placeholder="Senha" required autocomplete="current-password">
+                    </div>
+                    
+                    <div id="login-error" class="form-error-msg hidden"></div>
+
+                    <button type="submit" id="login-submit-btn" class="btn btn-primary auth-btn">
+                        <span class="btn-text">Entrar</span>
+                        <span class="btn-glow"></span>
+                    </button>
+                </form>
+                
+                <p class="auth-switch-text">Não tem uma conta? <a href="#" id="go-to-register" class="auth-link">Cadastre-se</a></p>
+            </div>
+        </div>
+
+        <!-- REGISTRATION SCREEN -->
+        <div id="register-screen" class="overlay hidden">
+            <div class="glass-card">
+                <h2 class="game-title accent-text">Criar Conta</h2>
+                <p class="game-subtitle">Preencha os campos para se cadastrar</p>
+                
+                <form id="register-form" class="auth-form" onsubmit="return false;">
+                    <div class="input-group">
+                        <input type="text" id="reg-name" placeholder="Nome Completo" required autocomplete="name">
+                    </div>
+                    <div class="input-group">
+                        <input type="tel" id="reg-phone" placeholder="Telefone (Ex: 11999999999)" required autocomplete="tel">
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="reg-password" placeholder="Senha" required autocomplete="new-password">
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="reg-confirm-password" placeholder="Confirmar Senha" required autocomplete="new-password">
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="reg-ref-code" placeholder="Código de Indicação (Opcional)">
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="reg-terms" required>
+                        <label for="reg-terms">Aceito os <a href="#" id="view-terms" class="auth-link-inline">Termos e Condições</a></label>
+                    </div>
+
+                    <div id="reg-error" class="form-error-msg hidden"></div>
+
+                    <button type="submit" id="reg-submit-btn" class="btn btn-primary auth-btn">
+                        <span class="btn-text">Cadastrar</span>
+                        <span class="btn-glow"></span>
+                    </button>
+                </form>
+                
+                <p class="auth-switch-text">Já tem uma conta? <a href="#" id="go-to-login" class="auth-link">Faça Login</a></p>
+            </div>
+        </div>
+
+        <!-- LOBBY SCREEN (Tabbed Dashboard Menu) -->
+        <div id="lobby-screen" class="overlay hidden">
+            <div class="glass-card lobby-card-container">
+                <!-- User Session Bar inside the Lobby Card -->
+                <div id="lobby-card-header">
+                    <span id="lobby-user-greeting">Olá, Jogador!</span>
+                    <span id="lobby-balance-header" class="accent-text">Saldo: R$ 0,00</span>
+                </div>
+
+                <!-- TAB CONTENT AREA -->
+                <div class="tab-content-container">
+                    
+                    <!-- 1. PLAY TAB -->
+                    <div id="tab-content-play" class="tab-panel active">
+                        <!-- PLAY INTRO VIEW -->
+                        <div id="play-intro-view" class="sub-view">
+                            <div class="logo-container">
+                                <img id="logo-bird" src="./godot-flappy-canarinho-master/assets/Bird/bird-1.png" alt="Canarinho Bird">
+                                <h1 class="game-title">Flappy <span class="accent-text">Canarinho</span></h1>
+                            </div>
+                            <p class="game-subtitle">Ajude o Canarinho a voar entre os obstáculos!</p>
+                            
+                            <div class="high-score-badge">
+                                <span class="badge-label">RECORDE</span>
+                                <span id="lobby-high-score" class="badge-value">R$ 0,00</span>
+                            </div>
+
+                            <button id="start-button" class="btn btn-primary">
+                                <span class="btn-text">Iniciar Jogo</span>
+                                <span class="btn-glow"></span>
+                            </button>
+
+                            <div class="instructions">
+                                <p class="desktop-instruction">Pressione <span class="key">ESPAÇO</span> ou <span class="key">CLIQUE</span> para voar</p>
+                                <p class="mobile-instruction">Toque na tela para voar</p>
+                            </div>
+                        </div>
+
+                        <!-- PLAY BET SELECTION VIEW -->
+                        <div id="play-bet-view" class="sub-view hidden-view">
+                            <h2 class="section-title">Escolha sua Aposta</h2>
+                            <p class="game-subtitle">Selecione o valor que deseja apostar</p>
+
+                            <div class="bet-quick-options">
+                                <button type="button" class="btn-bet-select" data-val="10">R$ 10</button>
+                                <button type="button" class="btn-bet-select" data-val="25">R$ 25</button>
+                                <button type="button" class="btn-bet-select" data-val="50">R$ 50</button>
+                                <button type="button" class="btn-bet-select" data-val="100">R$ 100</button>
+                            </div>
+
+                            <div class="input-group">
+                                <input type="number" id="custom-bet-amount" placeholder="Outro Valor (R$)" min="1" step="any">
+                            </div>
+
+                            <div class="payout-info-tag">
+                                💡 Cada cano ultrapassado paga <span class="accent-text" id="bet-payout-desc">20% da aposta</span>!
+                            </div>
+
+                            <div id="bet-error-msg" class="form-error-msg hidden"></div>
+
+                            <button id="btn-confirm-bet" class="btn btn-primary auth-btn">
+                                <span class="btn-text">Confirmar & Voar</span>
+                                <span class="btn-glow"></span>
+                            </button>
+                            
+                            <button id="btn-cancel-bet" class="btn btn-danger auth-btn">Voltar</button>
+                        </div>
+                    </div>
+
+                    <!-- 2. WALLET TAB -->
+                    <div id="tab-content-wallet" class="tab-panel hidden">
+                        <h2 class="section-title">Minha Carteira</h2>
+                        
+                        <div class="wallet-balance-box">
+                            <span class="wallet-balance-label">Saldo Disponível</span>
+                            <span id="wallet-balance-amount" class="wallet-balance-value">R$ 0,00</span>
+                            
+                            <!-- Rollover Indicator -->
+                            <div id="wallet-rollover-box" class="wallet-rollover-tag hidden">
+                                Rollover: <span id="wallet-rollover-progress">R$ 0/0</span>
+                            </div>
+                        </div>
+
+                        <div class="wallet-actions">
+                            <button id="btn-open-deposit" class="btn-wallet-action btn-deposit">
+                                <span class="action-icon">💸</span> Depositar
+                            </button>
+                            <button id="btn-open-withdraw" class="btn-wallet-action btn-withdraw">
+                                <span class="action-icon">🏦</span> Sacar
+                            </button>
+                        </div>
+
+                        <div class="history-section">
+                            <h3 class="history-title">Transações</h3>
+                            <div class="history-list-wrapper">
+                                <ul id="transaction-history-list" class="log-list">
+                                    <li class="empty-log">Nenhuma transação registrada.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. PROFILE TAB -->
+                    <div id="tab-content-profile" class="tab-panel hidden">
+                        <h2 class="section-title">Meu Perfil</h2>
+                        
+                        <div class="profile-details-grid">
+                            <div class="profile-item">
+                                <span class="profile-label">Nome</span>
+                                <span id="profile-name" class="profile-value">-</span>
+                            </div>
+                            <div class="profile-item">
+                                <span class="profile-label">Telefone</span>
+                                <span id="profile-phone" class="profile-value">-</span>
+                            </div>
+                            <div class="profile-item">
+                                <span class="profile-label">Código Indicação</span>
+                                <span id="profile-ref-code" class="profile-value">-</span>
+                            </div>
+                        </div>
+
+                        <div class="profile-stats-grid">
+                            <div class="stat-box-small">
+                                <span class="stat-label-small">Partidas</span>
+                                <span id="profile-stat-matches" class="stat-value-small">0</span>
+                            </div>
+                            <div class="stat-box-small">
+                                <span class="stat-label-small">Total Ganhos</span>
+                                <span id="profile-stat-earnings" class="stat-value-small">R$ 0,00</span>
+                            </div>
+                        </div>
+
+                        <button id="logout-btn" class="btn btn-danger auth-btn">Sair da Conta</button>
+                    </div>
+
+                    <!-- 4. HISTORY TAB -->
+                    <div id="tab-content-history" class="tab-panel hidden">
+                        <h2 class="section-title">Partidas Recentes</h2>
+                        <div class="history-section">
+                            <div class="history-list-wrapper">
+                                <ul id="match-history-list" class="log-list">
+                                    <li class="empty-log">Nenhuma partida jogada ainda.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB NAVIGATION BAR AT THE BOTTOM -->
+                <div class="tab-navigation-bar">
+                    <button id="tab-btn-play" class="tab-nav-item active" data-tab="play">
+                        <span class="tab-icon">🎮</span>
+                        <span class="tab-label">Jogar</span>
+                    </button>
+                    <button id="tab-btn-wallet" class="tab-nav-item" data-tab="wallet">
+                        <span class="tab-icon">💼</span>
+                        <span class="tab-label">Carteira</span>
+                    </button>
+                    <button id="tab-btn-profile" class="tab-nav-item" data-tab="profile">
+                        <span class="tab-icon">👤</span>
+                        <span class="tab-label">Perfil</span>
+                    </button>
+                    <button id="tab-btn-history" class="tab-nav-item" data-tab="history">
+                        <span class="tab-icon">📜</span>
+                        <span class="tab-label">Histórico</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- DEPOSIT MODAL -->
+        <div id="deposit-modal" class="overlay hidden">
+            <div class="glass-card modal-card">
+                <h2 class="game-title accent-text">Depositar Saldo</h2>
+                <p class="game-subtitle" id="deposit-limits-desc">Adicione saldo via PIX</p>
+                
+                <form id="deposit-form" class="auth-form" onsubmit="return false;">
+                    <div class="deposit-amount-options">
+                        <button type="button" class="btn-amount-select" data-val="10">R$ 10</button>
+                        <button type="button" class="btn-amount-select" data-val="20">R$ 20</button>
+                        <button type="button" class="btn-amount-select" data-val="50">R$ 50</button>
+                    </div>
+                    
+                    <div class="input-group">
+                        <input type="number" id="dep-custom-amount" placeholder="Valor Personalizado (R$)" min="1" step="any" required>
+                    </div>
+                    
+                    <div id="deposit-error" class="form-error-msg hidden"></div>
+                    
+                    <button type="submit" id="btn-generate-pix" class="btn btn-primary auth-btn">Gerar Chave PIX</button>
+                </form>
+
+                <!-- VizzionPay API simulated loader -->
+                <div id="deposit-pix-loader" class="pix-loader-box hidden">
+                    <div class="admin-loader-spinner"></div>
+                    <p class="pix-loader-text">Conectando com o gateway VizzionPay...</p>
+                </div>
+
+                <!-- Simulated PIX QR/Copy-Paste Box -->
+                <div id="pix-sim-area" class="hidden">
+                    <p class="pix-instruction">Copie o código PIX copia e cola gerado abaixo:</p>
+                    <div class="pix-key-box">
+                        <textarea id="pix-key-text" readonly></textarea>
+                        <button id="btn-copy-pix" class="btn-copy">Copiar</button>
+                    </div>
+                    <button id="btn-confirm-deposit" class="btn btn-primary auth-btn btn-success-glow">Confirmar Depósito Simulado</button>
+                </div>
+                
+                <button id="btn-close-deposit" class="btn btn-danger auth-btn">Fechar</button>
+            </div>
+        </div>
+
+        <!-- WITHDRAWAL MODAL -->
+        <div id="withdraw-modal" class="overlay hidden">
+            <div class="glass-card modal-card">
+                <h2 class="game-title text-red">Solicitar Saque</h2>
+                <p class="game-subtitle" id="withdraw-limits-desc">Transfira seus ganhos via PIX</p>
+                
+                <form id="withdraw-form" class="auth-form" onsubmit="return false;">
+                    <div class="input-group">
+                        <input type="number" id="with-amount" placeholder="Valor do Saque (R$)" min="1" step="any" required>
+                    </div>
+                    
+                    <div class="input-group">
+                        <select id="with-key-type" class="custom-select" required>
+                            <option value="" disabled selected>Tipo de Chave PIX</option>
+                            <option value="CPF">CPF</option>
+                            <option value="PHONE">Telefone</option>
+                            <option value="EMAIL">E-mail</option>
+                            <option value="RANDOM">Chave Aleatória</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <input type="text" id="with-key-value" placeholder="Insira a Chave PIX" required>
+                    </div>
+
+                    <div id="withdraw-error" class="form-error-msg hidden"></div>
+                    
+                    <button type="submit" id="btn-submit-withdraw" class="btn btn-danger auth-btn">Confirmar Saque</button>
+                </form>
+                
+                <button id="btn-close-withdraw" class="btn btn-primary auth-btn">Fechar</button>
+            </div>
+        </div>
+
+        <!-- GAME OVER SCREEN -->
+        <div id="gameover-screen" class="overlay hidden">
+            <div class="glass-card game-over-card">
+                <h2 class="game-title text-red">Fim de Jogo</h2>
+                
+                <div class="stats-container">
+                    <div class="stat-box">
+                        <span class="stat-label">Ganhos</span>
+                        <span id="final-score" class="stat-value">R$ 0,00</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Recorde</span>
+                        <span id="gameover-high-score" class="stat-value">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <div id="new-record-message" class="hidden-message">
+                    🎉 NOVO RECORDE! 🎉
+                </div>
+
+                <button id="restart-button" class="btn btn-danger">
+                    <span class="btn-text">Jogar Novamente</span>
+                    <span class="btn-glow-red"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FULL WIDTH DESKTOP ADMIN PANEL (Renders outside game viewport frame) -->
+    <div id="admin-screen" class="admin-desktop-overlay hidden">
+        <div class="admin-desktop-sidebar">
+            <div class="admin-sidebar-header">
+                <h3>Flappy <span class="accent-text">Admin</span></h3>
+                <span class="admin-badge">Desktop Portal</span>
+            </div>
+            <ul class="admin-sidebar-menu">
+                <li class="admin-menu-item active" data-tab="dashboard">📊 Visão Geral</li>
+                <li class="admin-menu-item" data-tab="users">👥 Usuários</li>
+                <li class="admin-menu-item" data-tab="jogabilidade">🎮 Jogabilidade</li>
+                <li class="admin-menu-item" data-tab="integrations">🔌 Integrações</li>
+                <li class="admin-menu-item" data-tab="finance">💸 Financeiro</li>
+                <li class="admin-menu-item" data-tab="settings">⚙️ Configurações</li>
+            </ul>
+            <div class="admin-sidebar-footer">
+                <button id="admin-logout-btn" class="btn btn-danger auth-btn" style="margin: 0;">Sair do Painel</button>
+            </div>
+        </div>
+
+        <div class="admin-desktop-content">
+            
+            <!-- 1. OVERVIEW/DASHBOARD TAB -->
+            <div id="admin-content-dashboard" class="admin-desktop-panel active">
+                <h2 class="admin-page-title">Visão Geral da Plataforma</h2>
+                <div class="admin-metrics-grid">
+                    <div class="metric-card">
+                        <span class="metric-label">Total Depositado</span>
+                        <span id="admin-metric-deposits" class="metric-value">R$ 0,00</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Total Sacado</span>
+                        <span id="admin-metric-withdraws" class="metric-value">R$ 0,00</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Total Apostado</span>
+                        <span id="admin-metric-wagered" class="metric-value">R$ 0,00</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">RTP Global Configurado</span>
+                        <span id="admin-metric-rtp" class="metric-value accent-text">100%</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Usuários Cadastrados</span>
+                        <span id="admin-metric-users-count" class="metric-value">0</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Contas Influencer</span>
+                        <span id="admin-metric-influencers-count" class="metric-value">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. USERS TAB -->
+            <div id="admin-content-users" class="admin-desktop-panel hidden">
+                <h2 class="admin-page-title">Gerenciar Usuários</h2>
+                <div class="admin-table-wrapper">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Nome / Cadastro</th>
+                                <th>Telefone</th>
+                                <th>Saldo</th>
+                                <th>Total Apostado</th>
+                                <th>Rollover Exigido</th>
+                                <th>Role</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-users-list">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3. JOGABILIDADE TAB (Normal vs Influencer Physics Settings) -->
+            <div id="admin-content-jogabilidade" class="admin-desktop-panel hidden">
+                <h2 class="admin-page-title">Física de Jogabilidade</h2>
+                
+                <div class="admin-desktop-layout-split" style="gap: 24px;">
+                    <!-- Normal Users Physics Card -->
+                    <div class="admin-form-box">
+                        <h3 class="admin-section-title" style="border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px; margin-bottom:16px;">🎮 Configuração: Usuário Comum</h3>
+                        
+                        <div class="admin-form-group">
+                            <label class="admin-label">Vão dos Canos (Normal): <span id="val-gap" class="accent-text">180px</span></label>
+                            <input type="range" id="admin-setting-gap" min="120" max="240" step="5" value="180" class="admin-slider">
+                            <span class="admin-desc">Configura o tamanho do vão vertical padrão do jogo (Padrão: 180px).</span>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label class="admin-label">Velocidade dos Canos (Normal): <span id="val-speed" class="accent-text">150</span></label>
+                            <input type="range" id="admin-setting-speed" min="100" max="220" step="5" value="150" class="admin-slider">
+                            <span class="admin-desc">Configura a velocidade inicial de rolamento do jogo (Padrão: 150).</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Influencers Physics Card -->
+                    <div class="admin-form-box">
+                        <h3 class="admin-section-title" style="border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px; margin-bottom:16px;">⭐️ Configuração: Influencer</h3>
+                        
+                        <div class="admin-form-group">
+                            <label class="admin-label">Vão dos Canos (Influencer): <span id="val-inf-gap" class="accent-text">220px</span></label>
+                            <input type="range" id="admin-inf-setting-gap" min="120" max="300" step="5" value="220" class="admin-slider">
+                            <span class="admin-desc">Configura a altura do vão para contas de influencer (Padrão: 220px).</span>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label class="admin-label">Velocidade dos Canos (Influencer): <span id="val-inf-speed" class="accent-text">140</span></label>
+                            <input type="range" id="admin-inf-setting-speed" min="80" max="220" step="5" value="140" class="admin-slider">
+                            <span class="admin-desc">Configura a velocidade horizontal para influencers (Padrão: 140).</span>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label class="admin-label">Tolerância a Colisões (Influencer)</label>
+                            <select id="admin-inf-setting-collision" class="custom-select">
+                                <option value="NORMAL">Física Padrão (24px)</option>
+                                <option value="LENIENT" selected>Super Foragível (12px)</option>
+                                <option value="GODMODE">Modo Imortal (Sem Colisão)</option>
+                            </select>
+                            <span class="admin-desc">Define a dificuldade do teste de colisão do pássaro para influencers.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-form-box" style="margin-top:24px; width:100%;">
+                    <h3 class="admin-section-title">Visualizar Influencers Ativos</h3>
+                    <div class="admin-table-wrapper" style="max-height: 180px;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Telefone</th>
+                                    <th>Ganhos na Carreira</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-influencers-list">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <button id="btn-save-jogabilidade-settings" class="btn btn-primary auth-btn" style="margin-top: 20px; max-width:320px; align-self:center;">Salvar Física de Jogabilidade</button>
+            </div>
+
+            <!-- 4. INTEGRAÇÕES TAB (Facebook/TikTok Pixels & VizzionPay Gateway) -->
+            <div id="admin-content-integrations" class="admin-desktop-panel hidden">
+                <h2 class="admin-page-title">Integrações de API e Marketing</h2>
+                
+                <div class="admin-desktop-layout-split" style="gap:24px;">
+                    <!-- VizzionPay Configuration Card -->
+                    <div class="admin-form-box">
+                        <h3 class="admin-section-title" style="border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px; margin-bottom:16px;">💳 Gateway: VizzionPay</h3>
+                        
+                        <div class="admin-input-group-row">
+                            <label class="admin-input-label">Public Key (Chave Pública)</label>
+                            <input type="text" id="admin-gateway-pubkey" placeholder="Insira a PUBLIC KEY do VizzionPay">
+                        </div>
+
+                        <div class="admin-input-group-row">
+                            <label class="admin-input-label">Secret Key (Chave Secreta)</label>
+                            <input type="password" id="admin-gateway-seckey" placeholder="Insira a SECRET KEY do VizzionPay">
+                        </div>
+
+                        <div class="admin-input-group-row">
+                            <label class="admin-input-label">URL Base da API</label>
+                            <input type="url" id="admin-gateway-urlbase" value="https://app.vizzionpay.com.br/api/v1" readonly style="opacity:0.75; cursor:not-allowed;">
+                        </div>
+
+                        <div class="admin-input-group-row">
+                            <label class="admin-input-label">URL de Webhook</label>
+                            <input type="url" id="admin-gateway-webhook" value="https://SEUSITE.COM/api/vizzionpay_webhook.php" readonly style="opacity:0.75; cursor:not-allowed;">
+                            <span class="admin-desc">Webhook de notificação automática de depósitos confirmados.</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Tracking Pixels Configuration Card -->
+                    <div class="admin-form-box">
+                        <h3 class="admin-section-title" style="border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px; margin-bottom:16px;">🔌 Pixels de Conversão</h3>
+                        
+                        <div class="admin-input-group-row">
+                            <label class="admin-input-label">Meta (Facebook) Pixel ID</label>
+                            <input type="text" id="admin-pixel-facebook" placeholder="Ex: 123456789012345">
+                            <span class="admin-desc">Código identificador para registrar eventos Facebook Pixel.</span>
+                        </div>
+
+                        <div class="admin-input-group-row">
+                            <label class="admin-input-label">TikTok Pixel ID</label>
+                            <input type="text" id="admin-pixel-tiktok" placeholder="Ex: C1234567890123">
+                            <span class="admin-desc">Código identificador para registrar eventos TikTok Pixel.</span>
+                        </div>
+                        
+                        <div class="payout-info-tag" style="margin-top:14px; text-align:left; font-size:11px; background:rgba(255,255,255,0.02);">
+                            💡 **Eventos Rastreados Automaticamente:**<br>
+                            - **Cadastro (CompleteRegistration)**: Disparado ao criar uma nova conta.<br>
+                            - **Purchase (Compra)**: Disparado ao confirmar qualquer depósito PIX.
+                        </div>
+                    </div>
+                </div>
+                
+                <button id="btn-save-integrations" class="btn btn-primary auth-btn" style="margin-top:20px; max-width:320px; align-self:center;">Salvar Integrações</button>
+            </div>
+
+            <!-- 5. FINANCIAL AUDIT LOGS TAB -->
+            <div id="admin-content-finance" class="admin-desktop-panel hidden">
+                <h2 class="admin-page-title">Histórico e Auditoria Financeira</h2>
+                
+                <div class="admin-sub-tab-nav">
+                    <button id="admin-sub-tab-btn-txs" class="admin-sub-nav-item active" data-subtab="txs">Todas Transações</button>
+                    <button id="admin-sub-tab-btn-deps" class="admin-sub-nav-item" data-subtab="deps">Depósitos</button>
+                    <button id="admin-sub-tab-btn-withdraws" class="admin-sub-nav-item" data-subtab="withdraws">Saques Solicitados</button>
+                </div>
+                
+                <div class="admin-sub-content">
+                    <!-- Transactions -->
+                    <div id="admin-sub-content-txs" class="admin-sub-panel active">
+                        <div class="admin-table-wrapper">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Nome / Tel</th>
+                                        <th>Tipo</th>
+                                        <th>Valor</th>
+                                        <th>Descrição</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-all-txs-list">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Deposits -->
+                    <div id="admin-sub-content-deps" class="admin-sub-panel hidden">
+                        <div class="admin-table-wrapper">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Nome / Tel</th>
+                                        <th>Valor Creditado</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-all-deps-list">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Withdrawals -->
+                    <div id="admin-sub-content-withdraws" class="admin-sub-panel hidden">
+                        <div class="admin-table-wrapper">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Nome / Tel</th>
+                                        <th>Valor Saque</th>
+                                        <th>Chave PIX</th>
+                                        <th>Status</th>
+                                        <th>Ações de Auditoria</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-all-withdraws-list">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. GENERAL PLATFORM SETTINGS TAB -->
+            <div id="admin-content-settings" class="admin-desktop-panel hidden">
+                <h2 class="admin-page-title">Configurações Gerais da Plataforma</h2>
+                
+                <div class="admin-desktop-layout-split" style="gap: 20px;">
+                    <!-- Left Column: Normal Gameplay Config -->
+                    <div class="admin-split-left" style="background: rgba(255,255,255,0.02); padding: 18px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.04);">
+                        <h3 class="admin-section-title" style="margin-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">Ganhos e RTP de Usuários Normais</h3>
+                        
+                        <div class="admin-form-group">
+                            <label class="admin-label">RTP Global (%): <span id="val-rtp" class="accent-text">100%</span></label>
+                            <input type="range" id="admin-setting-rtp" min="50" max="250" step="5" value="100" class="admin-slider">
+                            <span class="admin-desc">Escala o prêmio do cano (Ex: 150% do prêmio padrão).</span>
+                        </div>
+
+                        <div class="admin-form-group">
+                            <label class="admin-label">Ganho por Passada no Cano (% da Aposta)</label>
+                            <input type="number" id="admin-setting-pipe-pct" value="20" min="1" max="100" class="admin-text-input">
+                            <span class="admin-desc">Retorno base de cada ponto (Padrão: 20% da aposta).</span>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Financial limits, rollover & tiered bonuses -->
+                    <div class="admin-split-right" style="background: rgba(255,255,255,0.02); padding: 18px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.04);">
+                        <h3 class="admin-section-title" style="margin-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">Regras de Transações & Bônus</h3>
+                        
+                        <div class="admin-input-grid">
+                            <div class="admin-input-group-row">
+                                <label class="admin-input-label">Depósito Mínimo (R$)</label>
+                                <input type="number" id="admin-setting-min-dep" placeholder="Ex: 10,00" min="1" step="any">
+                            </div>
+
+                            <div class="admin-input-group-row">
+                                <label class="admin-input-label">Saque Mínimo (R$)</label>
+                                <input type="number" id="admin-setting-min-with" placeholder="Ex: 20,00" min="1" step="any">
+                            </div>
+
+                            <div class="admin-input-group-row">
+                                <label class="admin-input-label">Multiplicador de Rollover (Wagers)</label>
+                                <input type="number" id="admin-setting-rollover" placeholder="Ex: 3 para 3x rollover" min="0">
+                                <span class="admin-desc">Vezes que deve apostar o valor depositado antes de sacar.</span>
+                            </div>
+
+                            <div class="admin-input-group-row">
+                                <label class="admin-input-label">Bônus de Indicação (R$)</label>
+                                <input type="number" id="admin-setting-ref-bonus" placeholder="Ex: 5,00" min="0" step="any">
+                            </div>
+                        </div>
+
+                        <h4 class="settings-sub-title" style="margin-top: 14px; margin-bottom: 8px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Faixas de Bônus por Depósito</h4>
+                        <div class="bonus-tiers-container">
+                            <div class="tier-row">
+                                <span>Depósito &gt;= R$</span>
+                                <input type="number" id="admin-tier-1-val" placeholder="20" min="0">
+                                <span>ganha</span>
+                                <input type="number" id="admin-tier-1-pct" placeholder="10" min="0"><span>% extra</span>
+                            </div>
+                            <div class="tier-row">
+                                <span>Depósito &gt;= R$</span>
+                                <input type="number" id="admin-tier-2-val" placeholder="50" min="0">
+                                <span>ganha</span>
+                                <input type="number" id="admin-tier-2-pct" placeholder="25" min="0"><span>% extra</span>
+                            </div>
+                            <div class="tier-row">
+                                <span>Depósito &gt;= R$</span>
+                                <input type="number" id="admin-tier-3-val" placeholder="100" min="0">
+                                <span>ganha</span>
+                                <input type="number" id="admin-tier-3-pct" placeholder="50" min="0"><span>% extra</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btn-save-all-settings" class="btn btn-primary auth-btn" style="margin-top: 20px; max-width: 380px; align-self: center;">Salvar Configurações Globais</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN BALANCE EDIT MODAL -->
+    <div id="admin-balance-modal" class="overlay hidden">
+        <div class="glass-card modal-card">
+            <h2 class="game-title accent-text">Ajustar Saldo</h2>
+            <p class="game-subtitle" id="admin-balance-user-name">Alterar saldo do usuário</p>
+            
+            <form id="admin-balance-form" class="auth-form" onsubmit="return false;">
+                <div class="input-group">
+                    <input type="number" id="admin-balance-amount" placeholder="Novo Saldo (R$)" min="0" step="any" required>
+                </div>
+                
+                <button type="submit" id="btn-save-user-balance" class="btn btn-primary auth-btn">Salvar Saldo</button>
+            </form>
+            
+            <button id="btn-close-balance-modal" class="btn btn-danger auth-btn">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Script loading -->
+    <script src="game.js?v=9"></script>
+</body>
+</html>

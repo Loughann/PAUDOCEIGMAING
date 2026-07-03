@@ -1,0 +1,39 @@
+[gd_scene load_steps=6 format=3 uid="uid://dx57bhaxbw4vj"]
+
+[ext_resource type="Texture2D" uid="uid://b2db0tgbp4qjq" path="res://assets/Bird/bird-2.png" id="1_7b2dx"]
+[ext_resource type="Script" uid="uid://bitdvdh8khda0" path="res://assets/Bird/bird.gd" id="1_jo3v0"]
+[ext_resource type="Texture2D" uid="uid://cqatrtxoxhi3l" path="res://assets/Bird/bird-1.png" id="2_jo3v0"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_50kbo"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_7b2dx")
+}],
+"loop": true,
+"name": &"fall",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_jo3v0")
+}],
+"loop": true,
+"name": &"flap",
+"speed": 5.0
+}]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_xttqr"]
+radius = 28.071337
+
+[node name="Bird" type="CharacterBody2D"]
+script = ExtResource("1_jo3v0")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+scale = Vector2(0.1, 0.1)
+sprite_frames = SubResource("SpriteFrames_50kbo")
+animation = &"fall"
+flip_h = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_xttqr")

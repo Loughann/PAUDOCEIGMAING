@@ -1,0 +1,62 @@
+[gd_scene load_steps=5 format=3 uid="uid://b71egtq06gw5h"]
+
+[ext_resource type="Script" uid="uid://cbbe31wc73bxu" path="res://assets/Main/main.gd" id="1_8lx3f"]
+[ext_resource type="Texture2D" uid="uid://cfmmvfe6vsytw" path="res://assets/Main/mountains-bg.jpg" id="2_csyda"]
+[ext_resource type="PackedScene" uid="uid://3i8x6fvmjhyj" path="res://assets/Pipe/Pipe.tscn" id="2_hhr4v"]
+[ext_resource type="PackedScene" uid="uid://dx57bhaxbw4vj" path="res://assets/Bird/Bird.tscn" id="3_hhr4v"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_8lx3f")
+pipe_scene = ExtResource("2_hhr4v")
+
+[node name="ParallaxBackground" type="ParallaxBackground" parent="."]
+
+[node name="ParallaxLayer" type="ParallaxLayer" parent="ParallaxBackground"]
+motion_mirroring = Vector2(800, 0)
+
+[node name="Sprite2D" type="Sprite2D" parent="ParallaxBackground/ParallaxLayer"]
+position = Vector2(404, 363)
+scale = Vector2(1, 1.8149999)
+texture = ExtResource("2_csyda")
+
+[node name="PipeSpawner" type="Timer" parent="."]
+wait_time = 1.7999999999999998
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="MessageLabel" type="Label" parent="UI"]
+offset_left = 67.0
+offset_top = 141.0
+offset_right = 471.0
+offset_bottom = 406.0
+theme_override_colors/font_color = Color(0.7176471, 0, 0, 1)
+theme_override_colors/font_shadow_color = Color(0.87058824, 0.3882353, 0.38431373, 1)
+theme_override_colors/font_outline_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 12
+theme_override_constants/shadow_outline_size = 16
+theme_override_font_sizes/font_size = 46
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="ScoreLabel" type="Label" parent="UI"]
+offset_left = 343.0
+offset_top = 1.0
+offset_right = 537.0
+offset_bottom = 65.0
+theme_override_colors/font_color = Color(0.7176471, 0, 0, 1)
+theme_override_colors/font_shadow_color = Color(0.87058824, 0.3882353, 0.38431373, 1)
+theme_override_colors/font_outline_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 12
+theme_override_constants/shadow_outline_size = 16
+theme_override_font_sizes/font_size = 46
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Bird" parent="." instance=ExtResource("3_hhr4v")]
+position = Vector2(82, 187)
+
+[connection signal="timeout" from="PipeSpawner" to="." method="_on_timer_pipe_spawner_timeout"]
+[connection signal="timeout" from="PipeSpawner" to="." method="_on_pipe_spawner_timeout"]
+[connection signal="hit" from="Bird" to="." method="_on_bird_hit"]
