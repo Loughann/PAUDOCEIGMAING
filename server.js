@@ -25,6 +25,7 @@ if (!fs.existsSync(DB_FILE)) {
         userWagered: {},
         userRollover: {},
         highScores: {},
+        userRtpOverrides: {},
         settings: {
             flappy_rtp: "100",
             flappy_pipe_payout_pct: "20",
@@ -118,6 +119,7 @@ const server = http.createServer((req, res) => {
                     db.userWagered = Object.assign(db.userWagered || {}, clientDb.userWagered);
                     db.userRollover = Object.assign(db.userRollover || {}, clientDb.userRollover);
                     db.highScores = Object.assign(db.highScores || {}, clientDb.highScores);
+                    db.userRtpOverrides = Object.assign(db.userRtpOverrides || {}, clientDb.userRtpOverrides);
                     db.settings = Object.assign(db.settings || {}, clientDb.settings);
                     
                     writeDb(db);

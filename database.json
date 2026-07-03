@@ -1,14 +1,36 @@
 {
-  "registeredUsers": [],
+  "registeredUsers": [
+    {
+      "name": "teste m",
+      "phone": "21980987970",
+      "password": "123456",
+      "refCode": "",
+      "influencer": false,
+      "wageredTotal": 0,
+      "rolloverRequirement": 0
+    }
+  ],
   "globalDeposits": [],
   "globalWithdrawals": [],
   "affiliateLogs": [],
-  "userBalances": {},
-  "userTransactions": {},
-  "userMatches": {},
-  "userWagered": {},
-  "userRollover": {},
-  "highScores": {},
+  "userBalances": {
+    "21980987970": "0.00"
+  },
+  "userTransactions": {
+    "21980987970": []
+  },
+  "userMatches": {
+    "21980987970": []
+  },
+  "userWagered": {
+    "21980987970": "0.00"
+  },
+  "userRollover": {
+    "21980987970": "0.00"
+  },
+  "highScores": {
+    "21980987970": "0.00"
+  },
   "settings": {
     "flappy_rtp": "100",
     "flappy_pipe_payout_pct": "20",

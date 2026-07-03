@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
     <!-- Main stylesheet -->
-    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="style.css?v=13">
     <!-- PWA / Mobile web app capability -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -778,7 +778,111 @@
         </div>
     </div>
 
+    <!-- ADMIN USER DETAILS MODAL -->
+    <div id="admin-user-details-modal" class="overlay hidden">
+        <div class="glass-card modal-card" style="max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto; padding: 32px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px; margin-bottom:20px;">
+                <h2 id="admin-details-title" class="accent-text" style="font-size:24px; font-weight:800; margin:0;">Gerenciar Jogador</h2>
+                <span id="admin-details-badge" class="admin-badge-role normal">Normal</span>
+            </div>
+
+            <!-- Profile & Security Grid -->
+            <div class="admin-desktop-layout-split" style="gap:20px; margin-bottom:20px;">
+                <div class="admin-form-box" style="flex:1; margin-bottom:0; padding:16px;">
+                    <h3 class="admin-section-title" style="font-size:12px; margin-bottom:12px;">👤 Cadastro e Segurança</h3>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div>
+                            <label style="font-size:9px; color:var(--text-muted); text-transform:uppercase;">Telefone (ID)</label>
+                            <div id="admin-details-phone" style="font-weight:700; color:#fff; font-size:14px; margin-top:4px;">-</div>
+                        </div>
+                        <div>
+                            <label style="font-size:9px; color:var(--text-muted); text-transform:uppercase;">Senha da Conta</label>
+                            <div style="display:flex; gap:6px; margin-top:4px;">
+                                <input type="text" id="admin-details-password-input" style="background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.08); color:#fff; padding:6px 10px; border-radius:6px; font-size:12px; width:100%;" autocomplete="off">
+                                <button id="admin-btn-details-save-pwd" class="btn btn-primary" style="margin:0; padding:6px 12px; font-size:10px; min-width:auto; width:auto; border-radius:6px;">Salvar</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top:14px;">
+                        <button id="admin-btn-details-toggle-influencer" class="btn btn-primary" style="margin:0; font-size:12px; padding:8px 16px;">Promover a Influencer</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Financial Metrics Cards -->
+            <h3 class="admin-section-title" style="font-size:12px; margin-bottom:12px;">📊 Resumo Financeiro</h3>
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:24px;">
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:12px; border-radius:8px; text-align:center;">
+                    <span style="font-size:9px; color:var(--text-muted); text-transform:uppercase; display:block;">Saldo Atual</span>
+                    <span id="admin-details-balance-val" style="font-size:16px; font-weight:800; color:var(--primary); margin-top:4px; display:block;">R$ 0,00</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:12px; border-radius:8px; text-align:center;">
+                    <span style="font-size:9px; color:var(--text-muted); text-transform:uppercase; display:block;">Total Apostado</span>
+                    <span id="admin-details-wagered-val" style="font-size:16px; font-weight:800; color:#fff; margin-top:4px; display:block;">R$ 0,00</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:12px; border-radius:8px; text-align:center;">
+                    <span style="font-size:9px; color:var(--text-muted); text-transform:uppercase; display:block;">Rollover Restante</span>
+                    <span id="admin-details-rollover-val" style="font-size:16px; font-weight:800; color:var(--secondary); margin-top:4px; display:block;">R$ 0,00</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:12px; border-radius:8px; text-align:center;">
+                    <span style="font-size:9px; color:var(--text-muted); text-transform:uppercase; display:block;">Ganhos Totais</span>
+                    <span id="admin-details-earnings-val" style="font-size:16px; font-weight:800; color:#4dff4d; margin-top:4px; display:block;">R$ 0,00</span>
+                </div>
+            </div>
+
+            <!-- Financial & RTP Management Forms -->
+            <div class="admin-desktop-layout-split" style="gap:20px; margin-bottom:24px;">
+                <!-- Add / Sub Balance Card -->
+                <div class="admin-form-box" style="flex:1.2; margin-bottom:0; display:flex; flex-direction:column; gap:12px; padding:16px;">
+                    <h3 class="admin-section-title" style="font-size:12px; margin-bottom:4px;">💸 Ajustar Saldo</h3>
+                    <div style="display:flex; gap:10px;">
+                        <input type="number" id="admin-details-adjust-amount" placeholder="Valor (R$)" min="0.01" step="any" style="background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.08); color:#fff; padding:10px; border-radius:6px; font-size:12px; flex:1;" autocomplete="off">
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button id="admin-btn-details-add-balance" class="btn btn-primary" style="margin:0; flex:1; padding:10px; font-size:12px;">📥 Adicionar Saldo</button>
+                        <button id="admin-btn-details-sub-balance" class="btn btn-danger" style="margin:0; flex:1; padding:10px; font-size:12px; background:rgba(255,77,77,0.15); border:1px solid #ff4d4d; color:#ff4d4d;">📤 Retirar Saldo</button>
+                    </div>
+                </div>
+
+                <!-- Custom User RTP override Card -->
+                <div class="admin-form-box" style="flex:1; margin-bottom:0; display:flex; flex-direction:column; gap:12px; padding:16px;">
+                    <h3 class="admin-section-title" style="font-size:12px; margin-bottom:4px;">🎮 RTP do Jogador</h3>
+                    <div>
+                        <label style="font-size:9px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px; display:block;">RTP Personalizado (%)</label>
+                        <input type="number" id="admin-details-rtp-input" placeholder="Ex: 80, 100, 300 (Vazio = Global)" min="0" step="1" style="background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.08); color:#fff; padding:10px; border-radius:6px; font-size:12px; width:100%;" autocomplete="off">
+                    </div>
+                    <button id="admin-btn-details-save-rtp" class="btn btn-primary" style="margin:0; width:100%; padding:10px; font-size:12px;">Salvar RTP</button>
+                </div>
+            </div>
+
+            <!-- Affiliation Referrals Section -->
+            <div class="admin-form-box" style="margin-bottom:24px; padding:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h3 class="admin-section-title" style="font-size:12px; margin-bottom:0;">👥 Indicações do Jogador</h3>
+                    <span id="admin-details-ref-count" class="admin-badge-role normal" style="font-size:10px; padding:2px 8px; border-radius:20px; width:auto;">0 indicados</span>
+                </div>
+                
+                <div class="admin-table-wrapper" style="max-height:160px; overflow-y:auto; border-radius:6px;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Telefone</th>
+                                <th>Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-details-ref-list">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <button id="btn-close-details-modal" class="btn btn-danger auth-btn" style="margin:0;">Fechar Gerenciador</button>
+        </div>
+    </div>
+
     <!-- Script loading -->
-    <script src="game.js?v=12"></script>
+    <script src="game.js?v=13"></script>
 </body>
 </html>

@@ -125,6 +125,12 @@ async function syncWithServer() {
                     localStorage.setItem(`flappy_high_score_val_${phone}`, db.highScores[phone]);
                 }
             }
+            // Sync user specific RTP overrides
+            if (db.userRtpOverrides) {
+                for (const phone in db.userRtpOverrides) {
+                    localStorage.setItem(`flappy_rtp_override_${phone}`, db.userRtpOverrides[phone]);
+                }
+            }
             // Sync settings
             if (db.settings) {
                 for (const key in db.settings) {
@@ -152,6 +158,7 @@ async function pushToServer() {
             userWagered: {},
             userRollover: {},
             highScores: {},
+            userRtpOverrides: {},
             settings: {}
         };
 
@@ -176,6 +183,7 @@ async function pushToServer() {
             payload.userWagered[phone] = localStorage.getItem(`flappy_wagered_${phone}`) || '0.00';
             payload.userRollover[phone] = localStorage.getItem(`flappy_rollover_${phone}`) || '0.00';
             payload.highScores[phone] = localStorage.getItem(`flappy_high_score_val_${phone}`) || '0.00';
+            payload.userRtpOverrides[phone] = localStorage.getItem(`flappy_rtp_override_${phone}`) || '';
         });
 
         await fetch('/api/sync', {
@@ -884,8 +892,10 @@ function update(dt) {
                 pipe.passed = true;
                 score++;
                 
-                // Calculate Payout: custom payout % of the bet amount per pipe * global RTP multiplier
-                const rtpMult = globalRTP / 100;
+                // Calculate Payout: custom payout % of the bet amount per pipe * (user override RTP or global RTP)
+                const userOverrideRtp = currentUser ? parseFloat(localStorage.getItem(`flappy_rtp_override_${currentUser.phone}`)) : NaN;
+                const activeRtp = (!isNaN(userOverrideRtp) && userOverrideRtp >= 0) ? userOverrideRtp : globalRTP;
+                const rtpMult = activeRtp / 100;
                 const basePct = pipePayoutPercentSetting / 100;
                 const pipePayout = parseFloat(((currentBet * basePct) * rtpMult).toFixed(2));
                 matchEarnings += pipePayout;
@@ -1870,7 +1880,7 @@ function renderAdminUsersTable() {
                 <span class="admin-badge-role ${roleClass}" data-phone="${user.phone}">${roleText}</span>
             </td>
             <td>
-                <button class="admin-btn-action admin-btn-edit" data-phone="${user.phone}">Ajustar Saldo</button>
+                <button class="admin-btn-action admin-btn-edit" data-phone="${user.phone}">🔍 Gerenciar</button>
                 <button class="admin-btn-action admin-btn-delete" data-phone="${user.phone}">Excluir</button>
             </td>
         `;
@@ -1888,7 +1898,7 @@ function renderAdminUsersTable() {
     listElement.querySelectorAll('.admin-btn-edit').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            openBalanceEditModal(btn.dataset.phone);
+            openUserDetailsModal(btn.dataset.phone);
         });
     });
 
@@ -2349,47 +2359,204 @@ document.getElementById('btn-save-all-settings').addEventListener('click', (e) =
     alert("Configurações financeiras e bônus aplicadas com sucesso!");
 });
 
-// Balance Adjust popup modal
-function openBalanceEditModal(phone) {
+// User Details overlay modal management
+function openUserDetailsModal(phone) {
     editingUserPhone = phone;
     const users = getRegisteredUsers();
     const user = users.find(u => u.phone === phone);
     
-    if (user) {
-        const balance = parseFloat(localStorage.getItem(`flappy_balance_${phone}`) || '0.00');
-        document.getElementById('admin-balance-user-name').textContent = `Alterar saldo de ${user.name}`;
-        document.getElementById('admin-balance-amount').value = balance.toFixed(2);
-        
-        toggleModal('admin-balance-modal', true);
-    }
+    if (!user) return;
+
+    // Load data from localStorage
+    const balance = parseFloat(localStorage.getItem(`flappy_balance_${phone}`) || '0.00');
+    const wagered = parseFloat(localStorage.getItem(`flappy_wagered_${phone}`) || '0.00');
+    const rollover = parseFloat(localStorage.getItem(`flappy_rollover_${phone}`) || '0.00');
+    
+    // Sum all game payout logs
+    const txs = getUserTransactions(phone);
+    const totalEarning = txs
+        .filter(t => t.type === 'earning')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+    // Populate user profile info in DOM
+    document.getElementById('admin-details-title').textContent = `Gerenciar Jogador: ${user.name}`;
+    document.getElementById('admin-details-phone').textContent = user.phone;
+    document.getElementById('admin-details-password-input').value = user.password || '';
+
+    // Set role badge
+    const badge = document.getElementById('admin-details-badge');
+    badge.textContent = user.influencer ? 'Influencer' : 'Normal';
+    badge.className = `admin-badge-role ${user.influencer ? 'influencer' : 'normal'}`;
+
+    // Set influencer button text
+    const toggleRoleBtn = document.getElementById('admin-btn-details-toggle-influencer');
+    toggleRoleBtn.textContent = user.influencer ? 'Rebaixar a Normal' : 'Promover a Influencer';
+
+    // Populate financial stats
+    document.getElementById('admin-details-balance-val').textContent = formatCurrency(balance);
+    document.getElementById('admin-details-wagered-val').textContent = formatCurrency(wagered);
+    document.getElementById('admin-details-rollover-val').textContent = formatCurrency(rollover);
+    document.getElementById('admin-details-earnings-val').textContent = formatCurrency(totalEarning);
+
+    // Populate user specific RTP override
+    const rtpOverride = localStorage.getItem(`flappy_rtp_override_${phone}`) || '';
+    document.getElementById('admin-details-rtp-input').value = rtpOverride;
+
+    // Reset forms
+    document.getElementById('admin-details-adjust-amount').value = '';
+
+    // Render referred users list
+    renderDetailsReferralsTable(phone);
+
+    // Open details modal overlay
+    toggleModal('admin-user-details-modal', true);
 }
 
-document.getElementById('admin-balance-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const amount = parseFloat(document.getElementById('admin-balance-amount').value);
-    
-    if (editingUserPhone && !isNaN(amount) && amount >= 0) {
-        localStorage.setItem(`flappy_balance_${editingUserPhone}`, amount.toFixed(2));
-        
-        // Log transaction for user
-        const txs = getUserTransactions(editingUserPhone);
-        txs.unshift({
-            type: 'deposit',
-            amount: amount,
-            date: getCurrentDateString(),
-            description: 'Saldo Ajustado por Admin'
-        });
-        localStorage.setItem(`flappy_transactions_${editingUserPhone}`, JSON.stringify(txs));
+// Render referred users table inside the details modal
+function renderDetailsReferralsTable(phone) {
+    const listElement = document.getElementById('admin-details-ref-list');
+    const refCountBadge = document.getElementById('admin-details-ref-count');
+    listElement.innerHTML = '';
 
-        toggleModal('admin-balance-modal', false);
-        
-        if (activeAdminTab === 'users') renderAdminUsersTable();
+    const users = getRegisteredUsers();
+    // Filter users who registered using this phone as the referral code
+    const referrals = users.filter(u => u.refCode === phone);
+    
+    refCountBadge.textContent = `${referrals.length} ${referrals.length === 1 ? 'indicado' : 'indicados'}`;
+
+    if (referrals.length === 0) {
+        listElement.innerHTML = '<tr><td colspan="3" class="empty-log" style="text-align:center;">Nenhum indicado cadastrado com este código.</td></tr>';
+        return;
+    }
+
+    referrals.forEach(ref => {
+        const refBalance = parseFloat(localStorage.getItem(`flappy_balance_${ref.phone}`) || '0.00');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><span class="user-name">${ref.name}</span></td>
+            <td>${ref.phone}</td>
+            <td style="font-weight:700; color:var(--primary);">${formatCurrency(refBalance)}</td>
+        `;
+        listElement.appendChild(tr);
+    });
+}
+
+// Save Password click listener
+document.getElementById('admin-btn-details-save-pwd').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const newPwd = document.getElementById('admin-details-password-input').value.trim();
+    if (editingUserPhone && newPwd) {
+        const users = getRegisteredUsers();
+        const idx = users.findIndex(u => u.phone === editingUserPhone);
+        if (idx !== -1) {
+            users[idx].password = newPwd;
+            saveRegisteredUsers(users);
+            alert("Senha alterada com sucesso!");
+        }
     }
 });
 
-document.getElementById('btn-close-balance-modal').addEventListener('click', (e) => {
+// Toggle Influencer Role click listener
+document.getElementById('admin-btn-details-toggle-influencer').addEventListener('click', (e) => {
     e.stopPropagation();
-    toggleModal('admin-balance-modal', false);
+    if (editingUserPhone) {
+        toggleUserInfluencerRole(editingUserPhone);
+        // Refresh details modal view
+        openUserDetailsModal(editingUserPhone);
+    }
+});
+
+// Add balance click listener
+document.getElementById('admin-btn-details-add-balance').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const amt = parseFloat(document.getElementById('admin-details-adjust-amount').value);
+    if (!editingUserPhone) return;
+    if (isNaN(amt) || amt <= 0) {
+        alert("Digite um valor válido para adicionar!");
+        return;
+    }
+
+    const currentBalance = parseFloat(localStorage.getItem(`flappy_balance_${editingUserPhone}`) || '0.00');
+    const newBalance = currentBalance + amt;
+    localStorage.setItem(`flappy_balance_${editingUserPhone}`, newBalance.toFixed(2));
+
+    // Log transaction
+    const txs = getUserTransactions(editingUserPhone);
+    txs.unshift({
+        type: 'deposit',
+        amount: amt,
+        date: getCurrentDateString(),
+        description: 'Saldo Adicionado por Admin'
+    });
+    localStorage.setItem(`flappy_transactions_${editingUserPhone}`, JSON.stringify(txs));
+
+    // Refresh details modal view and users table
+    openUserDetailsModal(editingUserPhone);
+    if (activeAdminTab === 'users') renderAdminUsersTable();
+    alert(`R$ ${amt.toFixed(2)} adicionados com sucesso!`);
+});
+
+// Withdraw balance click listener
+document.getElementById('admin-btn-details-sub-balance').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const amt = parseFloat(document.getElementById('admin-details-adjust-amount').value);
+    if (!editingUserPhone) return;
+    if (isNaN(amt) || amt <= 0) {
+        alert("Digite um valor válido para retirar!");
+        return;
+    }
+
+    const currentBalance = parseFloat(localStorage.getItem(`flappy_balance_${editingUserPhone}`) || '0.00');
+    if (amt > currentBalance) {
+        alert("O valor de retirada é maior do que o saldo atual do usuário!");
+        return;
+    }
+
+    const newBalance = currentBalance - amt;
+    localStorage.setItem(`flappy_balance_${editingUserPhone}`, newBalance.toFixed(2));
+
+    // Log transaction
+    const txs = getUserTransactions(editingUserPhone);
+    txs.unshift({
+        type: 'withdraw',
+        amount: amt,
+        date: getCurrentDateString(),
+        description: 'Saldo Retirado por Admin'
+    });
+    localStorage.setItem(`flappy_transactions_${editingUserPhone}`, JSON.stringify(txs));
+
+    // Refresh details modal view and users table
+    openUserDetailsModal(editingUserPhone);
+    if (activeAdminTab === 'users') renderAdminUsersTable();
+    alert(`R$ ${amt.toFixed(2)} retirados com sucesso!`);
+});
+
+// Save Custom RTP Override click listener
+document.getElementById('admin-btn-details-save-rtp').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!editingUserPhone) return;
+    const rtpVal = document.getElementById('admin-details-rtp-input').value.trim();
+
+    if (rtpVal === '') {
+        // Clear override
+        localStorage.removeItem(`flappy_rtp_override_${editingUserPhone}`);
+        pushToServer();
+        alert("RTP personalizado removido. O jogador agora usará as configurações de RTP global.");
+    } else {
+        const amt = parseFloat(rtpVal);
+        if (isNaN(amt) || amt < 0) {
+            alert("Digite um valor de RTP válido (mínimo 0%)!");
+            return;
+        }
+        localStorage.setItem(`flappy_rtp_override_${editingUserPhone}`, amt.toFixed(0));
+        alert(`RTP personalizado definido em ${amt}% para este jogador!`);
+    }
+});
+
+// Close Details Modal listener
+document.getElementById('btn-close-details-modal').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleModal('admin-user-details-modal', false);
 });
 
 // Open Create User Modal
