@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
     <!-- Main stylesheet -->
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
     <!-- PWA / Mobile web app capability -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -422,7 +422,10 @@
 
             <!-- 2. USERS TAB -->
             <div id="admin-content-users" class="admin-desktop-panel hidden">
-                <h2 class="admin-page-title">Gerenciar Usuários</h2>
+                <div class="admin-action-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h2 class="admin-page-title" style="margin-bottom:0;">Gerenciar Usuários</h2>
+                    <button id="admin-btn-open-create-user" class="btn btn-primary" style="margin:0; padding:10px 20px; font-size:14px; max-width:200px;">+ Novo Usuário</button>
+                </div>
                 <div class="admin-table-wrapper">
                     <table class="admin-table">
                         <thead>
@@ -742,7 +745,40 @@
         </div>
     </div>
 
+    <!-- ADMIN CREATE USER MODAL -->
+    <div id="admin-create-user-modal" class="overlay hidden">
+        <div class="glass-card modal-card">
+            <h2 class="game-title accent-text">Criar Novo Usuário</h2>
+            <p class="game-subtitle">Adicione um novo jogador diretamente</p>
+            
+            <form id="admin-create-user-form" class="auth-form" onsubmit="return false;">
+                <div class="input-group">
+                    <input type="text" id="admin-create-name" placeholder="Nome Completo" required autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <input type="tel" id="admin-create-phone" placeholder="Telefone (Ex: 11999999999)" required autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <input type="password" id="admin-create-password" placeholder="Senha" required autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <input type="number" id="admin-create-balance" placeholder="Saldo Inicial (R$)" min="0" step="any" value="0.00">
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="admin-create-influencer">
+                    <label for="admin-create-influencer">Marcar como Influencer</label>
+                </div>
+                
+                <div id="admin-create-error" class="form-error-msg hidden"></div>
+                
+                <button type="submit" class="btn btn-primary auth-btn">Criar Usuário</button>
+            </form>
+            
+            <button id="btn-close-create-user-modal" class="btn btn-danger auth-btn">Cancelar</button>
+        </div>
+    </div>
+
     <!-- Script loading -->
-    <script src="game.js?v=10"></script>
+    <script src="game.js?v=11"></script>
 </body>
 </html>

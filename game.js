@@ -2244,3 +2244,82 @@ document.getElementById('btn-close-balance-modal').addEventListener('click', (e)
     e.stopPropagation();
     toggleModal('admin-balance-modal', false);
 });
+
+// Open Create User Modal
+document.getElementById('admin-btn-open-create-user').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('admin-create-user-form').reset();
+    document.getElementById('admin-create-error').classList.add('hidden');
+    toggleModal('admin-create-user-modal', true);
+});
+
+// Close Create User Modal
+document.getElementById('btn-close-create-user-modal').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleModal('admin-create-user-modal', false);
+});
+
+// Submit Create User Form
+document.getElementById('admin-create-user-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('admin-create-name').value.trim();
+    const phone = document.getElementById('admin-create-phone').value.trim();
+    const password = document.getElementById('admin-create-password').value.trim();
+    const balance = parseFloat(document.getElementById('admin-create-balance').value) || 0.00;
+    const isInfluencer = document.getElementById('admin-create-influencer').checked;
+    const errorBox = document.getElementById('admin-create-error');
+
+    errorBox.classList.add('hidden');
+
+    if (!name || !phone || !password) {
+        showError(errorBox, "Preencha todos os campos obrigatórios!");
+        return;
+    }
+
+    if (!/^\d{10,11}$/.test(phone)) {
+        showError(errorBox, "Telefone inválido! Use DDD + número (10 ou 11 dígitos).");
+        return;
+    }
+
+    const users = getRegisteredUsers();
+    if (users.some(u => u.phone === phone)) {
+        showError(errorBox, "Este número de telefone já está cadastrado!");
+        return;
+    }
+
+    // Create user object
+    const newUser = {
+        name: name,
+        phone: phone,
+        password: password,
+        refCode: '',
+        influencer: isInfluencer,
+        wageredTotal: 0.00,
+        rolloverRequirement: 0.00
+    };
+
+    users.push(newUser);
+    saveRegisteredUsers(users);
+
+    // Save balance and default transaction log
+    localStorage.setItem(`flappy_balance_${phone}`, balance.toFixed(2));
+    
+    const txs = [{
+        type: 'deposit',
+        amount: balance,
+        date: getCurrentDateString(),
+        description: 'Saldo Inicial (Criado por Admin)'
+    }];
+    localStorage.setItem(`flappy_transactions_${phone}`, JSON.stringify(txs));
+
+    // Clear stats/matches
+    localStorage.setItem(`flappy_matches_${phone}`, '[]');
+    localStorage.setItem(`flappy_wagered_${phone}`, '0.00');
+    localStorage.setItem(`flappy_rollover_${phone}`, '0.00');
+
+    toggleModal('admin-create-user-modal', false);
+    
+    // Refresh active views
+    if (activeAdminTab === 'users') renderAdminUsersTable();
+    alert(`Usuário ${name} criado com sucesso!`);
+});
