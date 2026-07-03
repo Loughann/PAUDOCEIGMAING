@@ -72,6 +72,7 @@ function writeDb(db) {
 }
 
 const server = http.createServer((req, res) => {
+    console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
     const parsedUrl = url.parse(req.url, true);
     const pathname = parsedUrl.pathname;
     const method = req.method;
