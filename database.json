@@ -53,5 +53,8 @@
     "flappy_gateway_seckey": "",
     "flappy_pixel_facebook_id": "",
     "flappy_pixel_tiktok_id": ""
+  },
+  "userRtpOverrides": {
+    "21980987970": ""
   }
 }

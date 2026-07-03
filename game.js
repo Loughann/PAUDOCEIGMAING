@@ -2363,34 +2363,35 @@ document.getElementById('btn-save-all-settings').addEventListener('click', (e) =
 function openUserDetailsModal(phone) {
     editingUserPhone = phone;
     const users = getRegisteredUsers();
-    const user = users.find(u => u.phone === phone);
+    const user = users.find(u => u && u.phone === phone);
     
     if (!user) return;
 
-    // Load data from localStorage
-    const balance = parseFloat(localStorage.getItem(`flappy_balance_${phone}`) || '0.00');
-    const wagered = parseFloat(localStorage.getItem(`flappy_wagered_${phone}`) || '0.00');
-    const rollover = parseFloat(localStorage.getItem(`flappy_rollover_${phone}`) || '0.00');
+    // Load data from localStorage (safe parseFloat fallback to 0)
+    const balance = parseFloat(localStorage.getItem(`flappy_balance_${phone}`)) || 0;
+    const wagered = parseFloat(localStorage.getItem(`flappy_wagered_${phone}`)) || 0;
+    const rollover = parseFloat(localStorage.getItem(`flappy_rollover_${phone}`)) || 0;
     
     // Sum all game payout logs
     const txs = getUserTransactions(phone);
     const totalEarning = txs
-        .filter(t => t.type === 'earning')
+        .filter(t => t && t.type === 'earning' && typeof t.amount === 'number')
         .reduce((sum, t) => sum + t.amount, 0);
 
     // Populate user profile info in DOM
-    document.getElementById('admin-details-title').textContent = `Gerenciar Jogador: ${user.name}`;
+    document.getElementById('admin-details-title').textContent = `Gerenciar Jogador: ${user.name || 'Sem nome'}`;
     document.getElementById('admin-details-phone').textContent = user.phone;
     document.getElementById('admin-details-password-input').value = user.password || '';
 
     // Set role badge
     const badge = document.getElementById('admin-details-badge');
-    badge.textContent = user.influencer ? 'Influencer' : 'Normal';
-    badge.className = `admin-badge-role ${user.influencer ? 'influencer' : 'normal'}`;
+    const isInfluencer = !!user.influencer;
+    badge.textContent = isInfluencer ? 'Influencer' : 'Normal';
+    badge.className = `admin-badge-role ${isInfluencer ? 'influencer' : 'normal'}`;
 
     // Set influencer button text
     const toggleRoleBtn = document.getElementById('admin-btn-details-toggle-influencer');
-    toggleRoleBtn.textContent = user.influencer ? 'Rebaixar a Normal' : 'Promover a Influencer';
+    toggleRoleBtn.textContent = isInfluencer ? 'Rebaixar a Normal' : 'Promover a Influencer';
 
     // Populate financial stats
     document.getElementById('admin-details-balance-val').textContent = formatCurrency(balance);
@@ -2420,7 +2421,7 @@ function renderDetailsReferralsTable(phone) {
 
     const users = getRegisteredUsers();
     // Filter users who registered using this phone as the referral code
-    const referrals = users.filter(u => u.refCode === phone);
+    const referrals = users.filter(u => u && u.refCode === phone);
     
     refCountBadge.textContent = `${referrals.length} ${referrals.length === 1 ? 'indicado' : 'indicados'}`;
 
@@ -2430,10 +2431,11 @@ function renderDetailsReferralsTable(phone) {
     }
 
     referrals.forEach(ref => {
-        const refBalance = parseFloat(localStorage.getItem(`flappy_balance_${ref.phone}`) || '0.00');
+        if (!ref || !ref.phone) return;
+        const refBalance = parseFloat(localStorage.getItem(`flappy_balance_${ref.phone}`)) || 0;
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><span class="user-name">${ref.name}</span></td>
+            <td><span class="user-name">${ref.name || 'Sem nome'}</span></td>
             <td>${ref.phone}</td>
             <td style="font-weight:700; color:var(--primary);">${formatCurrency(refBalance)}</td>
         `;
