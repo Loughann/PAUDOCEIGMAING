@@ -55,6 +55,148 @@ let activeAdminTab = 'dashboard';
 let activeAdminSubtab = 'txs';
 let editingUserPhone = '';
 
+// --- Server Database Sync Helpers ---
+let isSyncingFromServer = false;
+
+async function syncWithServer() {
+    if (isSyncingFromServer) return;
+    try {
+        isSyncingFromServer = true;
+        const res = await fetch('/api/db');
+        if (res.ok) {
+            const db = await res.json();
+            
+            // Migrate existing local storage users to server database if server database is fresh/empty
+            const localUsers = JSON.parse(localStorage.getItem('flappy_registered_users') || '[]');
+            if ((!db.registeredUsers || db.registeredUsers.length === 0) && localUsers.length > 0) {
+                isSyncingFromServer = false;
+                await pushToServer();
+                return;
+            }
+
+            // Sync registered users list
+            if (db.registeredUsers) {
+                localStorage.setItem('flappy_registered_users', JSON.stringify(db.registeredUsers));
+            }
+            // Sync global transaction logs
+            if (db.globalDeposits) {
+                localStorage.setItem('flappy_global_deposits', JSON.stringify(db.globalDeposits));
+            }
+            if (db.globalWithdrawals) {
+                localStorage.setItem('flappy_global_withdrawals', JSON.stringify(db.globalWithdrawals));
+            }
+            if (db.affiliateLogs) {
+                localStorage.setItem('flappy_affiliate_logs', JSON.stringify(db.affiliateLogs));
+            }
+            
+            // Sync user balances
+            if (db.userBalances) {
+                for (const phone in db.userBalances) {
+                    localStorage.setItem(`flappy_balance_${phone}`, db.userBalances[phone]);
+                }
+            }
+            // Sync user transactions list
+            if (db.userTransactions) {
+                for (const phone in db.userTransactions) {
+                    localStorage.setItem(`flappy_transactions_${phone}`, JSON.stringify(db.userTransactions[phone]));
+                }
+            }
+            // Sync matches list
+            if (db.userMatches) {
+                for (const phone in db.userMatches) {
+                    localStorage.setItem(`flappy_matches_${phone}`, JSON.stringify(db.userMatches[phone]));
+                }
+            }
+            // Sync wagered progress
+            if (db.userWagered) {
+                for (const phone in db.userWagered) {
+                    localStorage.setItem(`flappy_wagered_${phone}`, db.userWagered[phone]);
+                }
+            }
+            // Sync rollover rules
+            if (db.userRollover) {
+                for (const phone in db.userRollover) {
+                    localStorage.setItem(`flappy_rollover_${phone}`, db.userRollover[phone]);
+                }
+            }
+            // Sync high scores
+            if (db.highScores) {
+                for (const phone in db.highScores) {
+                    localStorage.setItem(`flappy_high_score_val_${phone}`, db.highScores[phone]);
+                }
+            }
+            // Sync settings
+            if (db.settings) {
+                for (const key in db.settings) {
+                    localStorage.setItem(key, db.settings[key]);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn("Could not sync database from server API:", e);
+    } finally {
+        isSyncingFromServer = false;
+    }
+}
+
+async function pushToServer() {
+    try {
+        const payload = {
+            registeredUsers: JSON.parse(localStorage.getItem('flappy_registered_users') || '[]'),
+            globalDeposits: JSON.parse(localStorage.getItem('flappy_global_deposits') || '[]'),
+            globalWithdrawals: JSON.parse(localStorage.getItem('flappy_global_withdrawals') || '[]'),
+            affiliateLogs: JSON.parse(localStorage.getItem('flappy_affiliate_logs') || '[]'),
+            userBalances: {},
+            userTransactions: {},
+            userMatches: {},
+            userWagered: {},
+            userRollover: {},
+            highScores: {},
+            settings: {}
+        };
+
+        const settingsKeys = [
+            'flappy_rtp', 'flappy_pipe_payout_pct', 'flappy_difficulty_gap', 'flappy_difficulty_speed',
+            'flappy_inf_gap', 'flappy_inf_speed', 'flappy_inf_collision', 'flappy_min_deposit',
+            'flappy_min_withdraw', 'flappy_rollover_mult', 'flappy_ref_bonus_amount',
+            'flappy_tier_1_val', 'flappy_tier_1_pct', 'flappy_tier_2_val', 'flappy_tier_2_pct',
+            'flappy_tier_3_val', 'flappy_tier_3_pct', 'flappy_gateway_pubkey', 'flappy_gateway_seckey',
+            'flappy_pixel_facebook_id', 'flappy_pixel_tiktok_id'
+        ];
+        settingsKeys.forEach(k => {
+            const val = localStorage.getItem(k);
+            if (val !== null) payload.settings[k] = val;
+        });
+
+        payload.registeredUsers.forEach(u => {
+            const phone = u.phone;
+            payload.userBalances[phone] = localStorage.getItem(`flappy_balance_${phone}`) || '0.00';
+            payload.userTransactions[phone] = JSON.parse(localStorage.getItem(`flappy_transactions_${phone}`) || '[]');
+            payload.userMatches[phone] = JSON.parse(localStorage.getItem(`flappy_matches_${phone}`) || '[]');
+            payload.userWagered[phone] = localStorage.getItem(`flappy_wagered_${phone}`) || '0.00';
+            payload.userRollover[phone] = localStorage.getItem(`flappy_rollover_${phone}`) || '0.00';
+            payload.highScores[phone] = localStorage.getItem(`flappy_high_score_val_${phone}`) || '0.00';
+        });
+
+        await fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+    } catch (e) {
+        console.warn("Could not sync push database to server API:", e);
+    }
+}
+
+// Override localStorage.setItem to auto-propagate to server database in background
+const originalSetItem = localStorage.setItem;
+localStorage.setItem = function(key, value) {
+    originalSetItem.call(localStorage, key, value);
+    if (!isSyncingFromServer && key.startsWith('flappy_')) {
+        pushToServer();
+    }
+};
+
 // --- Audio Synthesizer (Web Audio API) ---
 let audioCtx = null;
 
@@ -322,7 +464,9 @@ function onAssetLoad() {
     assetsLoaded++;
     if (assetsLoaded === totalAssets) {
         requestAnimationFrame(gameLoop);
-        checkActiveSession();
+        syncWithServer().then(() => {
+            checkActiveSession();
+        });
     }
 }
 
@@ -1632,7 +1776,7 @@ document.querySelectorAll('.admin-menu-item').forEach(item => {
     });
 });
 
-function renderAdminTab(tabName) {
+async function renderAdminTab(tabName) {
     activeAdminTab = tabName;
     
     // Show corresponding panel view
@@ -1645,6 +1789,9 @@ function renderAdminTab(tabName) {
             panel.classList.remove('active');
         }
     });
+
+    // Pull the latest database state from the server before rendering
+    await syncWithServer();
 
     // Populate dynamic data
     if (tabName === 'dashboard') {
