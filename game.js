@@ -162,20 +162,57 @@ function getCurrentDateString() {
 
 // --- User Database & Session Management ---
 function getRegisteredUsers() {
-    return JSON.parse(localStorage.getItem('flappy_registered_users') || '[]');
+    try {
+        const users = JSON.parse(localStorage.getItem('flappy_registered_users') || '[]');
+        return Array.isArray(users) ? users : [];
+    } catch (e) {
+        console.error("Error parsing flappy_registered_users:", e);
+        return [];
+    }
 }
 
 function saveRegisteredUsers(users) {
     localStorage.setItem('flappy_registered_users', JSON.stringify(users));
 }
 
+function getUserTransactions(phone) {
+    try {
+        const txs = JSON.parse(localStorage.getItem(`flappy_transactions_${phone}`) || '[]');
+        return Array.isArray(txs) ? txs : [];
+    } catch (e) {
+        console.error(`Error parsing flappy_transactions_${phone}:`, e);
+        return [];
+    }
+}
+
+function getUserMatches(phone) {
+    try {
+        const matches = JSON.parse(localStorage.getItem(`flappy_matches_${phone}`) || '[]');
+        return Array.isArray(matches) ? matches : [];
+    } catch (e) {
+        console.error(`Error parsing flappy_matches_${phone}:`, e);
+        return [];
+    }
+}
+
 function checkActiveSession() {
     const session = localStorage.getItem('flappy_active_session');
     if (session) {
-        currentUser = JSON.parse(session);
-        if (currentUser.role === 'admin') {
-            showAdminPanel();
-            return true;
+        try {
+            currentUser = JSON.parse(session);
+            if (currentUser.role === 'admin') {
+                showAdminPanel();
+                return true;
+            }
+            // Reload user from registered database to sync live status updates (e.g. Influencer toggles)
+            const users = getRegisteredUsers();
+            const dbUser = users.find(u => u.phone === currentUser.phone);
+            if (dbUser) {
+                currentUser = dbUser;
+                localStorage.setItem('flappy_active_session', JSON.stringify(currentUser));
+            }
+        } catch (e) {
+            console.error("Error checking active session:", e);
         }
         loadUserData();
         showGameUI();
@@ -197,10 +234,10 @@ function loadUserData() {
     userBalance = parseFloat(localStorage.getItem(`flappy_balance_${phone}`) || '0.00');
     
     // Load transaction history
-    transactions = JSON.parse(localStorage.getItem(`flappy_transactions_${phone}`) || '[]');
+    transactions = getUserTransactions(phone);
     
     // Load match history
-    matches = JSON.parse(localStorage.getItem(`flappy_matches_${phone}`) || '[]');
+    matches = getUserMatches(phone);
 
     // Load wager and rollover states
     userWagered = parseFloat(localStorage.getItem(`flappy_wagered_${phone}`) || '0.00');
@@ -996,23 +1033,6 @@ function renderProfileTab() {
     document.getElementById('profile-stat-earnings').textContent = formatCurrency(totalEarnings);
 }
 
-function renderProfileTab() {
-    if (!currentUser) return;
-
-    document.getElementById('profile-name').textContent = currentUser.name;
-    document.getElementById('profile-phone').textContent = currentUser.phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-    document.getElementById('profile-ref-code').textContent = currentUser.refCode || 'Nenhum';
-    
-    document.getElementById('profile-stat-matches').textContent = matches.length;
-    
-    // Calculate total career earnings
-    const totalEarnings = transactions
-        .filter(t => t.type === 'earning')
-        .reduce((sum, t) => sum + t.amount, 0);
-
-    document.getElementById('profile-stat-earnings').textContent = formatCurrency(totalEarnings);
-}
-
 function renderHistoryTab() {
     const listElement = document.getElementById('match-history-list');
     listElement.innerHTML = '';
@@ -1457,7 +1477,7 @@ document.getElementById('register-form').addEventListener('submit', (e) => {
             localStorage.setItem(`flappy_balance_${referrer.phone}`, (referrerBalance + refBonus).toFixed(2));
             
             // Log transaction for referrer
-            const refTxs = JSON.parse(localStorage.getItem(`flappy_transactions_${referrer.phone}`) || '[]');
+            const refTxs = getUserTransactions(referrer.phone);
             refTxs.unshift({
                 type: 'earning',
                 amount: refBonus,
@@ -1635,6 +1655,8 @@ function renderAdminTab(tabName) {
         renderAdminInfluencersTable();
     } else if (tabName === 'finance') {
         renderAdminFinanceLogs();
+    } else if (tabName === 'settings' || tabName === 'integrations') {
+        loadAdminConfigsToPanel();
     }
 }
 
@@ -1649,11 +1671,11 @@ function renderAdminOverviewDashboard() {
     users.forEach(u => {
         if (u.influencer) influencersCount++;
 
-        const txs = JSON.parse(localStorage.getItem(`flappy_transactions_${u.phone}`) || '[]');
+        const txs = getUserTransactions(u.phone);
         txs.forEach(t => {
             if (t.type === 'deposit') totalDeposited += t.amount;
-            if (t.type === 'withdraw' && t.description.includes('Saque')) totalWithdrawn += t.amount;
-            if (t.type === 'withdraw' && t.description.includes('Aposta')) totalWagered += t.amount;
+            if (t.type === 'withdraw' && t.description && t.description.includes('Saque')) totalWithdrawn += t.amount;
+            if (t.type === 'withdraw' && t.description && t.description.includes('Aposta')) totalWagered += t.amount;
         });
     });
 
@@ -1746,7 +1768,7 @@ function renderAdminInfluencersTable() {
         const tr = document.createElement('tr');
         
         // Sum all game payout logs
-        const txs = JSON.parse(localStorage.getItem(`flappy_transactions_${user.phone}`) || '[]');
+        const txs = getUserTransactions(user.phone);
         const totalEarning = txs
             .filter(t => t.type === 'earning')
             .reduce((sum, t) => sum + t.amount, 0);
@@ -1845,7 +1867,7 @@ function renderAdminAllTransactionsTable() {
     let allTxs = [];
 
     users.forEach(u => {
-        const txs = JSON.parse(localStorage.getItem(`flappy_transactions_${u.phone}`) || '[]');
+        const txs = getUserTransactions(u.phone);
         txs.forEach(t => {
             allTxs.push({
                 name: u.name,
@@ -1853,7 +1875,7 @@ function renderAdminAllTransactionsTable() {
                 type: t.type,
                 amount: t.amount,
                 date: t.date,
-                description: t.description
+                description: t.description || ''
             });
         });
     });
@@ -1861,9 +1883,12 @@ function renderAdminAllTransactionsTable() {
     // Sort by date (descending)
     allTxs.sort((a, b) => {
         const parseDate = (dStr) => {
+            if (!dStr) return 0;
             const parts = dStr.split(' ');
+            if (parts.length < 2) return 0;
             const dParts = parts[0].split('/');
             const tParts = parts[1].split(':');
+            if (dParts.length < 3 || tParts.length < 2) return 0;
             return new Date(dParts[2], dParts[1] - 1, dParts[0], tParts[0], tParts[1]).getTime();
         };
         return parseDate(b.date) - parseDate(a.date);
@@ -1888,7 +1913,7 @@ function renderAdminAllTransactionsTable() {
         } else if (tx.type === 'withdraw') {
             typeSymbol = '📤';
             amountClass = 'negative';
-            typeLabel = tx.description.includes('Aposta') ? 'Aposta' : 'Saque';
+            typeLabel = (tx.description && tx.description.includes('Aposta')) ? 'Aposta' : 'Saque';
         } else if (tx.type === 'earning') {
             typeSymbol = '🎮';
             amountClass = 'positive';
@@ -1899,7 +1924,7 @@ function renderAdminAllTransactionsTable() {
         const displaySign = tx.type === 'withdraw' ? '-' : sign;
 
         tr.innerHTML = `
-            <td>${tx.date}</td>
+            <td>${tx.date || '-'}</td>
             <td>
                 <div class="user-meta">
                     <span class="user-name">${tx.name}</span>
@@ -1908,7 +1933,7 @@ function renderAdminAllTransactionsTable() {
             </td>
             <td>${typeSymbol} ${typeLabel}</td>
             <td style="font-weight: 700;" class="status-${amountClass}">${displaySign}${formatCurrency(tx.amount)}</td>
-            <td>${tx.description}</td>
+            <td>${tx.description || '-'}</td>
         `;
         listElement.appendChild(tr);
     });
@@ -2006,54 +2031,62 @@ function renderAdminAllWithdrawalsTable() {
 }
 
 function approveUserWithdrawal(id) {
-    const withdraws = JSON.parse(localStorage.getItem('flappy_global_withdrawals') || '[]');
-    const idx = withdraws.findIndex(w => w.id === id);
-    if (idx !== -1) {
-        withdraws[idx].status = 'approved';
-        localStorage.setItem('flappy_global_withdrawals', JSON.stringify(withdraws));
+    try {
+        const withdraws = JSON.parse(localStorage.getItem('flappy_global_withdrawals') || '[]');
+        const idx = withdraws.findIndex(w => w.id === id);
+        if (idx !== -1) {
+            withdraws[idx].status = 'approved';
+            localStorage.setItem('flappy_global_withdrawals', JSON.stringify(withdraws));
 
-        // Update user transaction description to reflect approval
-        const phone = withdraws[idx].phone;
-        const txs = JSON.parse(localStorage.getItem(`flappy_transactions_${phone}`) || '[]');
-        if (txs.length > 0) {
-            const txIdx = txs.findIndex(t => t.type === 'withdraw' && t.amount === withdraws[idx].amount && t.description.includes('Solicitado'));
-            if (txIdx !== -1) {
-                txs[txIdx].description = `Saque PIX Aprovado (${withdraws[idx].keyType})`;
-                localStorage.setItem(`flappy_transactions_${phone}`, JSON.stringify(txs));
+            // Update user transaction description to reflect approval
+            const phone = withdraws[idx].phone;
+            const txs = getUserTransactions(phone);
+            if (txs.length > 0) {
+                const txIdx = txs.findIndex(t => t.type === 'withdraw' && t.amount === withdraws[idx].amount && t.description && t.description.includes('Solicitado'));
+                if (txIdx !== -1) {
+                    txs[txIdx].description = `Saque PIX Aprovado (${withdraws[idx].keyType})`;
+                    localStorage.setItem(`flappy_transactions_${phone}`, JSON.stringify(txs));
+                }
             }
-        }
 
-        alert("Saque aprovado com sucesso!");
-        renderAdminSubtab('withdraws');
+            alert("Saque aprovado com sucesso!");
+            renderAdminSubtab('withdraws');
+        }
+    } catch (e) {
+        console.error("Error approving withdrawal:", e);
     }
 }
 
 function rejectUserWithdrawal(id) {
-    const withdraws = JSON.parse(localStorage.getItem('flappy_global_withdrawals') || '[]');
-    const idx = withdraws.findIndex(w => w.id === id);
-    if (idx !== -1) {
-        withdraws[idx].status = 'rejected';
-        localStorage.setItem('flappy_global_withdrawals', JSON.stringify(withdraws));
+    try {
+        const withdraws = JSON.parse(localStorage.getItem('flappy_global_withdrawals') || '[]');
+        const idx = withdraws.findIndex(w => w.id === id);
+        if (idx !== -1) {
+            withdraws[idx].status = 'rejected';
+            localStorage.setItem('flappy_global_withdrawals', JSON.stringify(withdraws));
 
-        const phone = withdraws[idx].phone;
-        const refundAmt = withdraws[idx].amount;
+            const phone = withdraws[idx].phone;
+            const refundAmt = withdraws[idx].amount;
 
-        // Refund user balance
-        const balance = parseFloat(localStorage.getItem(`flappy_balance_${phone}`) || '0.00');
-        localStorage.setItem(`flappy_balance_${phone}`, (balance + refundAmt).toFixed(2));
+            // Refund user balance
+            const balance = parseFloat(localStorage.getItem(`flappy_balance_${phone}`) || '0.00');
+            localStorage.setItem(`flappy_balance_${phone}`, (balance + refundAmt).toFixed(2));
 
-        // Add refund transaction log to user history
-        const txs = JSON.parse(localStorage.getItem(`flappy_transactions_${phone}`) || '[]');
-        txs.unshift({
-            type: 'deposit',
-            amount: refundAmt,
-            date: getCurrentDateString(),
-            description: 'Reembolso Saque Recusado'
-        });
-        localStorage.setItem(`flappy_transactions_${phone}`, JSON.stringify(txs));
+            // Add refund transaction log to user history
+            const txs = getUserTransactions(phone);
+            txs.unshift({
+                type: 'deposit',
+                amount: refundAmt,
+                date: getCurrentDateString(),
+                description: 'Reembolso Saque Recusado'
+            });
+            localStorage.setItem(`flappy_transactions_${phone}`, JSON.stringify(txs));
 
-        alert("Saque recusado! O valor foi reembolsado ao saldo do usuário.");
-        renderAdminSubtab('withdraws');
+            alert("Saque recusado! O valor foi reembolsado ao saldo do usuário.");
+            renderAdminSubtab('withdraws');
+        }
+    } catch (e) {
+        console.error("Error rejecting withdrawal:", e);
     }
 }
 
@@ -2192,7 +2225,7 @@ document.getElementById('admin-balance-form').addEventListener('submit', (e) => 
         localStorage.setItem(`flappy_balance_${editingUserPhone}`, amount.toFixed(2));
         
         // Log transaction for user
-        const txs = JSON.parse(localStorage.getItem(`flappy_transactions_${editingUserPhone}`) || '[]');
+        const txs = getUserTransactions(editingUserPhone);
         txs.unshift({
             type: 'deposit',
             amount: amount,
